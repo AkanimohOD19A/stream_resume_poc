@@ -1,0 +1,17 @@
+groq==0.33.0
+pandas==2.3.3
+pillow==11.3.0
+pyarrow==21.0.0
+pydantic==2.12.3
+pydantic_core==2.41.4
+PyPDF2==3.0.1
+python-dateutil==2.9.0.post0
+python-docx==1.2.0
+pytz==2025.2
+reportlab==4.4.4
+requests==2.32.5
+streamlit==1.50.0
+streamlit-ace==0.1.1
+streamlit-monaco-editor==0.1.6
+streamlit-webrtc==0.63.11
+toml==0.10.2
