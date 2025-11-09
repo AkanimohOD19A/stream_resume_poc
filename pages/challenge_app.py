@@ -17,9 +17,13 @@ st.set_page_config(
 # --------------------
 # Session Setup
 # --------------------
-if "username" not in st.session_state:
+if ("username" not in st.session_state
+    or not st.session_state.username.strip()
+):
     st.warning("Please return to the calibration page to start properly.")
     st.stop()
+else:
+    st.success(f"Ready to start {st.session_state.username}")
 
 if "current_q_index" not in st.session_state:
     st.session_state.current_q_index = 0
@@ -30,7 +34,7 @@ if "ai_assessment" not in st.session_state:
 if "user_code" not in st.session_state:
     st.session_state.user_code = ""
 
-DB_FILE = "data/progress.db"
+DB_FILE = "../data/progress.db"
 
 # --------------------
 # Database Setup

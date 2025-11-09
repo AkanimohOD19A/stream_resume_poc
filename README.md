@@ -1,5 +1,3 @@
-## 
-
 ### Calibration Test
 
 **Description**
@@ -11,7 +9,7 @@ This uploads your resume (and optionally a job description) →
 
 [Skill Calibration App]
   └─ Resume Upload
-      └─ AI Strength Analysis
+    └─ AI Strength Analysis
           └─ Calibration Quiz
               └─ Skill Path Recommendation
                     ↓
