@@ -1,3 +1,5 @@
+import os
+import tempfile
 import streamlit as st
 import sqlite3
 import time
@@ -34,14 +36,13 @@ if "ai_assessment" not in st.session_state:
 if "user_code" not in st.session_state:
     st.session_state.user_code = ""
 
-DB_FILE = "../data/progress.db"
-
 # --------------------
-# Database Setup
+# Database Setup (In-Memory)
 # --------------------
-def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
+# Database connection stored in session state for persistence
+if 'db_conn' not in st.session_state:
+    st.session_state.db_conn = sqlite3.connect(':memory:', check_same_thread=False)
+    cursor = st.session_state.db_conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS progress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,21 +56,20 @@ def init_db():
             created_at TEXT
         )
     """)
-    conn.commit()
-    conn.close()
+    st.session_state.db_conn.commit()
 
 def save_progress(username, q_id, title, passed, total, duration, score):
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO progress (username, question_id, question_title, score, duration, passed_tests, total_tests, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (username, q_id, title, score, duration, passed, total, datetime.now().isoformat()))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = st.session_state.db_conn.cursor()
+        cursor.execute("""
+            INSERT INTO progress (username, question_id, question_title, score, duration, passed_tests, total_tests, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (username, q_id, title, score, duration, passed, total, datetime.now().isoformat()))
+        st.session_state.db_conn.commit()
+    except Exception as e:
+        st.warning(f"Could not save progress: {e}")
 
 def load_leaderboard():
-    conn = sqlite3.connect(DB_FILE)
     df = None
     try:
         import pandas as pd
@@ -79,19 +79,15 @@ def load_leaderboard():
             FROM progress
             GROUP BY username
             ORDER BY total_score DESC, total_time ASC
-        """, conn)
-    except Exception:
-        pass
-    conn.close()
+        """, st.session_state.db_conn)
+    except Exception as e:
+        pass  # Silently fail if no data yet
     return df
-
-init_db()
 
 # --------------------
 # Load Questions (local)
 # --------------------
 def get_questions():
-    # You could move these to SQLite later
     return [
         {
             "id": 1,
@@ -166,14 +162,14 @@ st.write(current["desc"])
 st.divider()
 
 # Code editor
-user_code = st.text_area("Write your code here:", value=current["starter"], height=200)
+user_code = st.text_area("Write your code here:", value=current["starter"], height=200, key=f"code_{st.session_state.current_q_index}")
 
 # Buttons
 col1, col2 = st.columns(2)
 with col1:
     run_btn = st.button("▶️ Run Tests", use_container_width=True)
 with col2:
-    next_btn = st.button("➡️ Next Challenge", use_container_width=True)
+    next_btn = st.button("➡️ Next Challenge", use_container_width=True, disabled=st.session_state.current_q_index >= total_questions - 1)
 
 # Run tests
 if run_btn:
@@ -181,9 +177,9 @@ if run_btn:
     results = run_code(user_code, current["tests"])
     end_time = time.time()
     duration = round(end_time - start_time, 2)
-    passed = sum(1 for r in results if r["passed"])
+    passed = sum(1 for r in results if r.get("passed", False))
     total = len(results)
-    score = int((passed / total) * 100)
+    score = int((passed / total) * 100) if total > 0 else 0
     st.session_state.test_results = results
 
     if passed == total:
@@ -191,6 +187,7 @@ if run_btn:
         save_progress(st.session_state.username, current["id"], current["title"], passed, total, duration, score)
         if st.session_state.current_q_index < total_questions - 1:
             st.session_state.current_q_index += 1
+            st.rerun()
         else:
             st.balloons()
             st.success("🎉 You’ve completed all challenges!")
@@ -201,19 +198,21 @@ if run_btn:
 if st.session_state.test_results:
     st.markdown("### 🧪 Test Results")
     for i, r in enumerate(st.session_state.test_results, 1):
-        if r["passed"]:
+        if r.get("passed", False):
             st.success(f"Test {i} passed ✅ | Input: {r['input']}")
         else:
-            st.error(f"Test {i} failed ❌ | {r.get('error','')}")
+            error_msg = r.get('error', 'Expected: {} Got: {}'.format(r.get('expected'), r.get('actual')))
+            st.error(f"Test {i} failed ❌ | {error_msg}")
 
 # Leaderboard
 st.divider()
 st.subheader("🏆 Leaderboard")
 df = load_leaderboard()
 if df is not None and not df.empty:
-    st.dataframe(df)
+    st.dataframe(df, use_container_width=True)
 else:
     st.info("Leaderboard will appear after some completions.")
 
 # Footer
 st.markdown("<br><center>⚡ Built for skill progression & confidence growth.</center>", unsafe_allow_html=True)
+st.caption("Note: Progress is stored in memory and will reset when you refresh the page.")
