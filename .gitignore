@@ -1,8 +1,5 @@
 .streamlit/
 app_v1.py
 .venv/
-email_service.py
-live_app.py
-live_coding.py
-test_dir.py
+junk/
 utils_v1.py

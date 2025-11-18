@@ -147,7 +147,7 @@ elif st.session_state.stage == 'summary':
                 st.session_state["username"] = username
                 st.session_state["current_q_index"] = 0
                 st.session_state["test_results"] = []
-                st.switch_page("pages/challenge_app.py")
+                st.switch_page("challenge_app.py")
             # st.switch_page("pages/challenge_app.py")
 
 st.markdown("---")

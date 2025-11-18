@@ -15,4 +15,4 @@ streamlit-ace==0.1.1
 streamlit-monaco-editor==0.1.6
 streamlit-webrtc==0.63.11
 toml==0.10.2
- streamlit_code_editor==0.1.22
+streamlit_code_editor==0.1.22
